@@ -3,16 +3,15 @@
 local rpc = require("rpc")
 local common = require("./utils/common")
 
-local rpc_url = "https://arb1.arbitrum.io/rpc" -- Rpc url
-local from_block = "0x0" -- Starting block
-local to_block = "latest" -- Ending block
-local contract_address = "" -- Disperser contract address
+-- local rpc_url = "https://arb1.arbitrum.io/rpc" -- Rpc url
+local rpc_url = "https://rpc.ankr.com/bsc" -- Rpc url
+local contract_address = "0xfabE62133473e11088B1cFa1dBD4c0b54F858bf5" -- Disperser contract address
 local topics = {
-    { "" }
+    { "0x3af7f326060b91f1af55623af2f2950a6e653322c948f59b22f93ab9f699e1ed" }
     -- Add more topics as needed
 }
 
-local function getLogs()
+local function getLogs(from_block, to_block)
     local response = rpc.query_logs(from_block, to_block, contract_address, topics)
 
     if response then
@@ -75,7 +74,10 @@ end
 local function main()
     rpc.init(rpc_url)
     
-    local logs = getLogs()
+    local from_block = "0x27556d7" -- Starting block 41244376
+    local to_block = "latest" -- Ending block
+
+    local logs = getLogs(from_block, to_block)
     
     local tx_info = getDecodeTxInfo(logs[#logs])
 
