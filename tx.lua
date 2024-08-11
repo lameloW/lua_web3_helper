@@ -37,7 +37,7 @@ local function get_tx(contract_address, start_block, end_block, page, offset, so
             for _, item in ipairs(response.result) do
                 if item.input then
                     local method_signature = string.sub(item.input, 1, 10)
-                    if method_signature == config.method_signature then
+                    if method_signature == config.method_signature and item.isError == "0" then
                         table.insert(filter_txs, item)
                     end
                 end
