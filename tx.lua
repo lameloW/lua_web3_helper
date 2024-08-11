@@ -1,64 +1,19 @@
 -- tx.lua
 
-local rpc = require("rpc")
+local scan_api = require("scan_api")
 local common = require("./utils/common")
 
--- local rpc_url = "https://arb1.arbitrum.io/rpc" -- Rpc url
-local rpc_url = "https://rpc.ankr.com/bsc" -- Rpc url
-local contract_address = "0xfabE62133473e11088B1cFa1dBD4c0b54F858bf5" -- Disperser contract address
-local topics = {
-    { "0x3af7f326060b91f1af55623af2f2950a6e653322c948f59b22f93ab9f699e1ed" }
-    -- Add more topics as needed
-}
+local scan_api_key = ""
+local contract_address = ""
 
-local function getLogs(from_block, to_block)
-    local response = rpc.query_logs(from_block, to_block, contract_address, topics)
-
-    if response then
-        if response.error then
-            print("Error: " .. response.error.message)
-
-            return {}
-        else
-            local logs = {}
-
-            print("Logs: ")
-            for _, log in ipairs(response.result) do
-
-                local season = tonumber(log.topics[2]:sub(3), 16)
-                local timestamp = tonumber(log.data:sub(3), 16)
-                local transactionHash = log.transactionHash
-
-                logs[season] = {
-                    season = season,
-                    timestamp = timestamp,
-                    transactionHash = transactionHash,
-                }
-            end
-
-            table.sort(logs, function(a, b)
-                return a.season < b.season
-            end)
-
-            return logs
-        end
-    else
-        print("Failed to retrieve logs.")
-
-        return {}
-    end
-end
-
-local function getDecodeTxInfo(log_detail)
-    local tx_detail = rpc.get_tx(log_detail.transactionHash)
-
-    if tx_detail.data then
-        local info = common.decode_data(tx_detail.data)
+local function get_decode_tx_info(tx_detail)
+    if tx_detail.hash then
+        local info = common.decode_data(tx_detail.input)
 
         return {
-            season = log_detail.season,
-            timestamp = log_detail.timestamp,
-            transactionHash = log_detail.transactionHash,
+            timestamp = tx_detail.timestamp,
+            hash = tx_detail.hash,
+            blockNumber = tx_detail.blockNumber,
 
             token_address = info.token_address,
             addresses = info.addresses,
@@ -71,20 +26,50 @@ local function getDecodeTxInfo(log_detail)
     end
 end
 
-local function main()
-    rpc.init(rpc_url)
-    
-    local from_block = "0x27556d7" -- Starting block 41244376
-    local to_block = "latest" -- Ending block
+local function get_tx(contract_address, start_block, end_block, page, offset, sort)
+    local response, err = scan_api.get_internal_transactions(contract_address, start_block, end_block, page, offset, sort)
 
-    local logs = getLogs(from_block, to_block)
-    
-    local tx_info = getDecodeTxInfo(logs[#logs])
+    if response then
+        if response.status == "1" and response.message == "OK" then
 
-    if tx_info.transactionHash then
-        common.print_table(tx_info)
+            local filter_txs = {}
+            for _, item in ipairs(response.result) do
+                if item.input then
+                    local method_signature = string.sub(item.input, 1, 10)
+                    if method_signature == "" then
+                        table.insert(filter_txs, item)
+                    end
+                end
+            end
+
+            table.sort(filter_txs, function(a, b)
+                return a.timeStamp > b.timeStamp
+            end)
+
+            return filter_txs
+        else
+            print("Error:", err)
+            return {}
+        end
+    else
+        print("Error:", err)
+        return {}
     end
+end
 
+local function main()
+    scan_api.init(scan_api_key)
+
+    local txs = get_tx(contract_address, "0", "99999999", "1", "4000", "desc")
+    print(#txs)
+
+    if #txs > 0 then
+        local tx_info = get_decode_tx_info(txs[1])
+
+        if tx_info.hash then
+            common.print_table(tx_info)
+        end
+    end
 end
 
 main()
