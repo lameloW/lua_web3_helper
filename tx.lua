@@ -2,9 +2,10 @@
 
 local scan_api = require("scan_api")
 local common = require("./utils/common")
+local config = require("config")
 
-local scan_api_key = ""
-local contract_address = ""
+local scan_api_key = config.scan_api_key
+local contract_address = config.disperser_contract_address
 
 local function get_decode_tx_info(tx_detail)
     if tx_detail.hash then
@@ -36,7 +37,7 @@ local function get_tx(contract_address, start_block, end_block, page, offset, so
             for _, item in ipairs(response.result) do
                 if item.input then
                     local method_signature = string.sub(item.input, 1, 10)
-                    if method_signature == "" then
+                    if method_signature == config.method_signature then
                         table.insert(filter_txs, item)
                     end
                 end

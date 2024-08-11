@@ -1,6 +1,7 @@
 local https = require("ssl.https")
 local ltn12 = require("ltn12")
 local cjson = require("cjson")
+local config = require("config")
 
 local bscscan = {}
 
@@ -9,7 +10,7 @@ function bscscan.init(api_key)
 end
 
 function bscscan.request(params)
-    local base_url = "https://api.bscscan.com/api"
+    local base_url = config.rpc_url
     
     local query_string = {}
     for key, value in pairs(params) do
